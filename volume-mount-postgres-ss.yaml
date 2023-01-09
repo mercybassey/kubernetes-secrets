@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres # The name of the StatefulSet
+spec:
+  serviceName: postgres # The name of the service this StatefulSet should use
+  selector:
+    matchLabels:
+      app: postgres
+  replicas: 1 # Indicates this StatefulSet should only create one instance of the mysql database
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      containers:
+        - name: postgres # The name of the postgres container
+          image: postgres # The image of the postgres database
+          imagePullPolicy: "IfNotPresent"
+          env:
+          - name: POSTGRES_USER
+            value: /var/lib/postgresql/secret/postgres_username
+          - name: POSTGRES_PASSWORD
+            value: /var/lib/postgresql/secret/postgres_password
+          ports:
+          - containerPort: 5432 # The port number postgres listens on
+          volumeMounts:
+          - name: data
+            mountPath: /var/lib/postgresql/data # Data should be mounted onto this file path
+          - name: secret-volume
+            mountPath: /var/lib/postgresql/secret
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+					claimName: postgres-claim # Indicates the postgres database should use a PVC called mysql-claim
+      - name: secret-volume
+        secret:
+          secretName: postgres-secret
+          items:
+          - key: postgres_password
+            path: postgres_password
+            mode: 511
+          - key: postgres_username
+            path: postgres_username
+            mode: 511
